@@ -22,6 +22,9 @@
 #ifndef CPQREF_POL_H_
 #define CPQREF_POL_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void
 pol_gen_product(
@@ -80,5 +83,8 @@ pol_mul_coefficients(
 
 int64_t cmod(const int64_t a, const int64_t p);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif //CPQREF_POL_H_

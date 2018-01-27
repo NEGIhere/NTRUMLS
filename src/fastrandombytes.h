@@ -22,11 +22,22 @@
 #ifndef CPQREF_FASTRANDOMBYTES_H_
 #define CPQREF_FASTRANDOMBYTES_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void fastrandombytes(unsigned char *r, unsigned long long rlen);
 
 void rng_init();
+
 void rng_cleanup();
+
 void rng_uint16(uint16_t *r);
+
 void rng_uint64(uint64_t *r);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

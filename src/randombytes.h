@@ -7,6 +7,14 @@ Public domain.
 #ifndef RANDOMBYTES_H
 #define RANDOMBYTES_H
 
-void randombytes(unsigned char *,unsigned long long);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void randombytes(unsigned char *, unsigned long long);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
