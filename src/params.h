@@ -22,9 +22,9 @@
 #ifndef CPQREF_PARAMS_H_
 #define CPQREF_PARAMS_H_
 
-typedef enum _PQ_PARAM_SET_ID PQ_PARAM_SET_ID;
-typedef const struct _PQ_PARAM_SET  PQ_PARAM_SET;
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 enum _PQ_PARAM_SET_ID {
     XXX_20140508_401,
@@ -39,6 +39,9 @@ enum _PQ_PARAM_SET_ID {
     XXX_20151024_743,
     XXX_20151024_907,
 };
+
+typedef enum _PQ_PARAM_SET_ID PQ_PARAM_SET_ID;
+typedef const struct _PQ_PARAM_SET  PQ_PARAM_SET;
 
 
 struct _PQ_PARAM_SET {
@@ -66,5 +69,9 @@ pq_get_param_set_by_id(PQ_PARAM_SET_ID id);
 
 PQ_PARAM_SET *
 pq_get_param_set_by_oid(const uint8_t *oid);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

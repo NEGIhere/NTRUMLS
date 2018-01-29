@@ -22,6 +22,10 @@
 #ifndef CPQREF_PQNTRUSIGN_H_
 #define CPQREF_PQNTRUSIGN_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int
 pq_gen_key(
     PQ_PARAM_SET  *params,
@@ -49,5 +53,9 @@ pq_verify(
     const unsigned char *public_key_blob,
     const size_t        msg_len,
     const unsigned char *msg);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

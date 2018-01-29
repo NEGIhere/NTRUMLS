@@ -2,6 +2,10 @@
 #ifndef CPQREF_CONVERT_H_
 #define CPQREF_CONVERT_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int
 int64_trits_2_bits(
         int64_t       *poly,
@@ -44,4 +48,9 @@ octets_2_int16_elements(
     uint8_t const  *in,             /*  in - ptr to octets to be unpacked */
     uint8_t         n_bits,         /*  in - no. of bits in output element */
     uint16_t       *out);           /* out - addr for output elements */
+
+#ifdef __cplusplus
+}
+#endif
+    
 #endif

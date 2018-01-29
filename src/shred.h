@@ -22,6 +22,14 @@
 #ifndef CPQREF_SHRED_H_
 #define CPQREF_SHRED_H_
 
+#ifdef __cplusplus
+    extern "C" {
+#endif
+
 void shred(void *v, size_t n);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -22,6 +22,9 @@
 #ifndef CPQREF_PACK_H_
 #define CPQREF_PACK_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* TODO: Define this elsewhere. */
 #define HASH_BYTES 64
@@ -147,5 +150,9 @@ get_digest_ptr(
     const unsigned char **digest,
     const size_t          blob_len,
     const unsigned char  *blob);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
