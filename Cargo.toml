@@ -1,5 +1,5 @@
 [package]
-name = "NTRUMLS"
+name = "ntrumls"
 version = "0.1.0"
 authors = [ "Jeffrey Hoffstein <jhoff@math.brown.edu>",
             "Vladislav Markushin <negigic@gmail.com>" ]
