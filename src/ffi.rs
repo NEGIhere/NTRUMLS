@@ -21,7 +21,7 @@ use libc::{c_int, c_uchar, c_char, c_uint, c_void, size_t, uint8_t, int8_t, uint
 #[derive(Clone, Debug)]
 #[repr(C)] pub struct PQParamSet(
     PQParamSetID,
-    c_char,
+    *mut c_char,
     [uint8_t; 3],
     uint8_t,
     uint8_t,
@@ -39,12 +39,14 @@ use libc::{c_int, c_uchar, c_char, c_uint, c_void, size_t, uint8_t, int8_t, uint
 );
 
 extern "C" {
-    pub fn pq_gen_key(params: *mut PQParamSet,
-                                    privkey_blob_len: *mut size_t,
-                                    privkey_blob: *mut c_uchar,
-                                    pubkey_blob_len: *mut size_t,
-                                    pubkey_blob: *mut c_uchar) -> c_int;
-
-
-    pub fn pq_get_param_set_by_id(params: PQParamSetID) -> *mut PQParamSet;
+//    pub fn pq_gen_key(params: *mut PQParamSet,
+//                                    privkey_blob_len: *mut size_t,
+//                                    privkey_blob: *mut c_uchar,
+//                                    pubkey_blob_len: *mut size_t,
+//                                    pubkey_blob: *mut c_uchar) -> c_int;
+//
+//
+    pub fn pq_get_param_set_by_id(id: PQParamSetID) -> *mut PQParamSet;
+    pub fn bench_param_set(id: PQParamSetID) -> c_int;
+    pub fn call_this_func_plz() -> c_int;
 }

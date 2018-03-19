@@ -553,4 +553,7 @@ pq_gen_key(
   return PQNTRU_OK;
 }
 
+int call_this_func_plz() {
+  return 1337;
+}
 

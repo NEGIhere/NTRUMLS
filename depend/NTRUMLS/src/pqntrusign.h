@@ -54,6 +54,8 @@ pq_verify(
     const size_t        msg_len,
     const unsigned char *msg);
 
+int call_this_func_plz();
+
 #ifdef __cplusplus
 }
 #endif
