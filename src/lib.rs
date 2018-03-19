@@ -29,7 +29,7 @@ use std::{error, fmt, ops, ptr};
 
 pub mod ffi;
 
-struct NTRUMLS {
+pub struct NTRUMLS {
 
 }
 
