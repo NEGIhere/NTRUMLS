@@ -10,6 +10,7 @@ keywords = [ "crypto", "post-quantum", "ntrumls", "nist", "signature" ]
 #readme = "README.md"
 
 build = "build.rs"
+links = "ntrumls"
 [build-dependencies]
 gcc = "0.3"
 
@@ -24,8 +25,9 @@ default = []
 [dev-dependencies]
 serde = "1.0"
 serde_json = "1.0"
-rand = "0.3"
+rand = "0.3.20"
 rustc-serialize = "0.3"
+rlibc = "1.0.0"
 
 [dependencies]
 libc = "0.2"

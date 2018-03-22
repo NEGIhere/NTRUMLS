@@ -553,7 +553,159 @@ pq_gen_key(
   return PQNTRU_OK;
 }
 
-int call_this_func_plz() {
-  return 1337;
-}
 
+int
+pq_gen_key_fg(
+    PQ_PARAM_SET  *P,
+    uint16_t *fg,
+    size_t        *privkey_blob_len,
+    unsigned char *privkey_blob,
+    size_t        *pubkey_blob_len,
+    unsigned char *pubkey_blob)
+{
+  uint16_t      i;
+  uint16_t      m;
+
+  uint16_t      N;
+  uint16_t      padN;
+  int64_t       q;
+  int8_t        p;
+  uint16_t      d1;
+  uint16_t      d2;
+  uint16_t      d3;
+
+  size_t        private_key_blob_len;
+  size_t        public_key_blob_len;
+
+  uint16_t      *f;
+  uint16_t      *g;
+  int64_t       *h;
+
+  size_t        scratch_len;
+  size_t        offset;
+  unsigned char *scratch;
+  int64_t       *a1;
+  int64_t       *a2;
+  int64_t       *tmpx3;
+
+  if(!P || !privkey_blob_len || !pubkey_blob_len)
+  {
+    return PQNTRU_ERROR;
+  }
+
+  N = P->N;
+  padN = P->padded_N;
+  q = P->q;
+  p = P->p;
+  d1 = P->d1;
+  d2 = P->d2;
+  d3 = P->d3;
+
+  /* TODO: Standardize packed key formats */
+
+  private_key_blob_len = PRIVKEY_PACKED_BYTES(P);
+  public_key_blob_len = PUBKEY_PACKED_BYTES(P);
+
+  if(!privkey_blob || !pubkey_blob)
+  {
+    if(!privkey_blob && privkey_blob_len != NULL)
+    {
+      *privkey_blob_len = private_key_blob_len;
+    }
+    if(!pubkey_blob && pubkey_blob_len != NULL)
+    {
+      *pubkey_blob_len = public_key_blob_len;
+    }
+    return PQNTRU_OK;
+  }
+
+  if((*privkey_blob_len != private_key_blob_len)
+      || (*pubkey_blob_len != public_key_blob_len))
+  {
+    return PQNTRU_ERROR;
+  }
+
+  scratch_len = 2 * PRODUCT_FORM_BYTES(P) + 6 * POLYNOMIAL_BYTES(P);
+  if(!(scratch = malloc(scratch_len)))
+  {
+    return PQNTRU_ERROR;
+  }
+  memset(scratch, 0, scratch_len);
+
+  offset = 0;
+  f = fg;
+  g = fg + PRODUCT_FORM_BYTES(P) / 2;
+  /*f = (uint16_t*)(scratch);*/            offset += PRODUCT_FORM_BYTES(P);
+  /*g = (uint16_t*)(scratch + offset);*/   offset += PRODUCT_FORM_BYTES(P);
+  h  = (int64_t*)(scratch + offset);   offset += POLYNOMIAL_BYTES(P);
+  a1 = (int64_t*)(scratch + offset);   offset += POLYNOMIAL_BYTES(P);
+  a2 = (int64_t*)(scratch + offset);   offset += POLYNOMIAL_BYTES(P);
+  tmpx3 = (int64_t*)(scratch + offset);
+
+
+  /* Find invertible pf mod q */
+  /* TODO: Better sampling of product form keys
+   *       Try to avoid keys with f(1) = 0
+   */
+  do
+  {
+//    pol_gen_product(f, (uint8_t) d1, (uint8_t) d2, (uint8_t) d3, N);
+
+    /* f = p * (1 + product form poly) */
+    memset(a1, 0, POLYNOMIAL_BYTES(P));
+    a1[0] = p;
+
+    pol_mul_product(a1, a1, d1, d2, d3, f, N, tmpx3);
+    a1[0] += p;
+
+  } while(PQNTRU_ERROR == pol_inv_mod2(a2, a1, N));
+
+  /* Lift from (Z/2Z)[X]/(X^N - 1) to (Z/qZ)[X]/(X^N -1) */
+  for (m = 0; m < 5; ++m)   /* assumes 2^16 < q <= 2^32 */
+  {
+    /* a^-1 = a^-1 * (2 - a * a^-1) mod q */
+
+    pol_mul_product(a1, a2, d1, d2, d3, f, N, tmpx3);
+
+    for (i = 0; i < N; ++i)
+    {
+      a1[i] = -p*(a1[i] + a2[i]);
+    }
+
+    a1[0] = a1[0] + 2;
+    pol_mul_coefficients(a2, a2, a1, N, padN, q, tmpx3);
+  }
+
+
+  /* Find invertible g mod p */
+  do
+  {
+    /* Generate product form g,
+     * then expand it to find inverse mod p
+     */
+//    pol_gen_product(g, (uint8_t) d1, (uint8_t) d2, (uint8_t) d3, N);
+
+    memset(a1, 0, POLYNOMIAL_BYTES(P));
+    a1[0] = 1;
+
+    pol_mul_product(a1, a1, d1, d2, d3, g, N, tmpx3);
+    a1[0] += 1;
+
+  } while(PQNTRU_ERROR == pol_inv_modp(tmpx3, a1, N, p));
+
+  pack_private_key(P, f, g, tmpx3, private_key_blob_len, privkey_blob);
+
+  /* Calculate public key, h = g/f mod q */
+  pol_mul_product(h, a2, d1, d2, d3, g, N, tmpx3);
+  for(i=0; i<N; i++)
+  {
+    h[i] = cmod(h[i] + a2[i], q);
+  }
+
+  pack_public_key(P, h, public_key_blob_len, pubkey_blob);
+
+  shred(scratch, scratch_len);
+  free(scratch);
+
+  return PQNTRU_OK;
+}

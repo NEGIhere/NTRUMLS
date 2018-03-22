@@ -35,6 +35,15 @@ pq_gen_key(
     unsigned char *pubkey_blob);
 
 int
+pq_gen_key_fg(
+    PQ_PARAM_SET  *params,
+    uint16_t *fg,
+    size_t        *privkey_blob_len,
+    unsigned char *privkey_blob,
+    size_t        *pubkey_blob_len,
+    unsigned char *pubkey_blob);
+
+int
 pq_sign(
     size_t              *packed_sig_len,
     unsigned char       *packed_sig,
@@ -53,8 +62,6 @@ pq_verify(
     const unsigned char *public_key_blob,
     const size_t        msg_len,
     const unsigned char *msg);
-
-int call_this_func_plz();
 
 #ifdef __cplusplus
 }
