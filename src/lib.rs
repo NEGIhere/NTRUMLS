@@ -16,11 +16,11 @@ extern crate libc;
 
 pub mod ffi;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct PublicKey(pub Vec<u8>);
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct PrivateKey(pub Vec<u8>);
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Signature(pub Vec<u8>);
 
 pub enum PQParamSetID {
@@ -159,7 +159,7 @@ pub mod tests {
         println!("{:?}", sk);
         println!("{:?}", pk);
 
-        let msg = "TEST_MESSAGE";
+        let msg = "TEST MESSAGE";
         let sig = ntrumls.sign(msg.as_bytes(), &sk, &pk).expect("failed to generate signature");
         println!("{:?}", sig);
         assert!(ntrumls.verify(msg.as_bytes(), &sig, &pk));
