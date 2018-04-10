@@ -14,14 +14,54 @@
 
 extern crate libc;
 
+use std::ops::{Deref, DerefMut};
+
 pub mod ffi;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct PublicKey(pub Vec<u8>);
-#[derive(Debug, PartialEq, Eq)]
+//impl Deref for PublicKey {
+//    type Target = [u8];
+//
+//    fn deref(&self) -> &[u8] {
+//        &self.0
+//    }
+//}
+//impl DerefMut for PublicKey {
+//    fn deref_mut(&mut self) -> &mut [u8] {
+//        &mut self.0
+//    }
+//}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct PrivateKey(pub Vec<u8>);
-#[derive(Debug, PartialEq, Eq)]
+//impl Deref for PrivateKey {
+//    type Target = [u8];
+//
+//    fn deref(&self) -> &[u8] {
+//        &self.0
+//    }
+//}
+//impl DerefMut for PrivateKey {
+//    fn deref_mut(&mut self) -> &mut [u8] {
+//        &mut self.0
+//    }
+//}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Signature(pub Vec<u8>);
+//impl Deref for Signature {
+//    type Target = [u8];
+//
+//    fn deref(&self) -> &[u8] {
+//        &self.0
+//    }
+//}
+//impl DerefMut for Signature {
+//    fn deref_mut(&mut self) -> &mut [u8] {
+//        &mut self.0
+//    }
+//}
 
 pub enum PQParamSetID {
    Security82Bit, // XXX_20151024_401
