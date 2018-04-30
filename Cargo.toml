@@ -1,6 +1,6 @@
 [package]
 name = "ntrumls-plus"
-version = "0.0.3"
+version = "0.0.4"
 authors = [ "Jeffrey Hoffstein <jhoff@math.brown.edu>",
             "Vladislav Markushin <negigic@gmail.com>" ]
 license = "GPL-1.0"

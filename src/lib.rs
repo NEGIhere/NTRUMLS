@@ -13,13 +13,31 @@
 #![cfg_attr(all(test, feature = "unstable"), feature(test))]
 
 extern crate libc;
+extern crate rustc_serialize;
 
 use std::ops::{Deref, DerefMut};
+use rustc_serialize::{
+    hex::{ToHex, FromHex},
+    Encodable, Decodable, Encoder, Decoder,
+};
 
 pub mod ffi;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct PublicKey(pub Vec<u8>);
+
+impl Encodable for PublicKey {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        s.emit_str(&format!("{}", self.0.to_hex()))
+    }
+}
+
+impl Decodable for PublicKey {
+    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
+        Ok(PublicKey(d.read_str()?.from_hex().map_err(|e| d.error(&e.to_string()))?))
+    }
+}
+
 //impl Deref for PublicKey {
 //    type Target = [u8];
 //
@@ -35,6 +53,19 @@ pub struct PublicKey(pub Vec<u8>);
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct PrivateKey(pub Vec<u8>);
+
+impl Encodable for PrivateKey {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        s.emit_str(&format!("{}", self.0.to_hex()))
+    }
+}
+
+impl Decodable for PrivateKey {
+    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
+        Ok(PrivateKey(d.read_str()?.from_hex().map_err(|e| d.error(&e.to_string()))?))
+    }
+}
+
 //impl Deref for PrivateKey {
 //    type Target = [u8];
 //
@@ -50,6 +81,19 @@ pub struct PrivateKey(pub Vec<u8>);
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Signature(pub Vec<u8>);
+
+impl Encodable for Signature {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        s.emit_str(&format!("{}", self.0.to_hex()))
+    }
+}
+
+impl Decodable for Signature {
+    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
+        Ok(Signature(d.read_str()?.from_hex().map_err(|e| d.error(&e.to_string()))?))
+    }
+}
+
 //impl Deref for Signature {
 //    type Target = [u8];
 //
