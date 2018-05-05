@@ -68,9 +68,9 @@ unpack_private_key(
 {
   const unsigned char *blob_ptr;
 
-  if(!P || !f || !g || !ginv || !blob)
+  if(!P || !f || !g || !blob)
   {
-    return PQNTRU_ERROR;
+      return PQNTRU_ERROR;
   }
 
   if(blob_len != PRIVKEY_PACKED_BYTES(P))
@@ -90,11 +90,13 @@ unpack_private_key(
   octets_2_int16_elements(PACKED_PRODUCT_FORM_BYTES(P),
                     blob_ptr, P->N_bits, g);
 
-  blob_ptr += PACKED_PRODUCT_FORM_BYTES(P);
+  if (ginv) {
+      blob_ptr += PACKED_PRODUCT_FORM_BYTES(P);
 
-  /* Unpack g^-1 */
-  bits_2_int64_trits(PACKED_MOD3_POLY_BYTES(P),
-                     blob_ptr, ginv, P->N);
+    /* Unpack g^-1 */
+    bits_2_int64_trits(PACKED_MOD3_POLY_BYTES(P),
+                       blob_ptr, ginv, P->N);
+  }
 
   return PQNTRU_OK;
 }

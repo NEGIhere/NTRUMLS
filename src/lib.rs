@@ -15,7 +15,7 @@
 extern crate libc;
 extern crate rustc_serialize;
 
-use std::ops::{Deref, DerefMut};
+//use std::ops::{Deref, DerefMut};
 use rustc_serialize::{
     hex::{ToHex, FromHex},
     Encodable, Decodable, Encoder, Decoder,
@@ -118,13 +118,15 @@ pub enum PQParamSetID {
 pub type PQParamSet = ffi::PQParamSet;
 
 pub struct NTRUMLS {
-    p: PQParamSet
+    p: PQParamSet,
+    pubkey_packed_bytes_len: usize,
+    privkey_packed_bytes_len: usize,
 }
 
 impl NTRUMLS {
     pub fn with_param_set(param_set: PQParamSetID) -> Self {
         unsafe {
-            let param_set = match param_set {
+            let p = match param_set {
                 PQParamSetID::Security82Bit => ffi::PQParamSetID::Xxx20151024n401,
                 PQParamSetID::Security88Bit => ffi::PQParamSetID::Xxx20151024n443,
                 PQParamSetID::Security126Bit => ffi::PQParamSetID::Xxx20151024n563,
@@ -132,21 +134,13 @@ impl NTRUMLS {
                 PQParamSetID::Security269Bit => ffi::PQParamSetID::Xxx20151024n907,
             };
 
-            let p = ffi::pq_get_param_set_by_id(param_set);
+            let p = ffi::pq_get_param_set_by_id(p);
             if p.is_null() {
                 panic!("Invalid PQParamSetID");
             }
 
             let p = (*p).clone();
-            NTRUMLS {
-                p
-            }
-        }
-    }
 
-    pub fn generate_keypair(&self) -> Option<(PrivateKey, PublicKey)> {
-        unsafe {
-            let p = &self.p;
             let oid_bytes_len = std::mem::size_of::<[u8; 3]>();
             let packed_product_from_bytes_len = ((2 * (p.d1 + p.d2 + p.d3) as usize * p.n_bits as usize + 7) / 8) as usize;
             let packed_mod3_poly_bytes_len = (p.n + 4)/5;
@@ -156,8 +150,20 @@ impl NTRUMLS {
             let pubkey_packed_bytes_len = 2 + oid_bytes_len + packed_mod_q_poly_bytes_len as usize + hash_bytes_len;
             let privkey_packed_bytes_len = 2 + oid_bytes_len + 2 * packed_product_from_bytes_len as usize + packed_mod3_poly_bytes_len as usize;
 
-            let privkey_blob_len = &mut (privkey_packed_bytes_len as isize) as *mut isize;
-            let pubkey_blob_len = &mut (pubkey_packed_bytes_len as isize) as *mut isize;
+            NTRUMLS {
+                p,
+                pubkey_packed_bytes_len,
+                privkey_packed_bytes_len,
+            }
+        }
+    }
+
+    pub fn generate_keypair(&self) -> Option<(PrivateKey, PublicKey)> {
+        unsafe {
+            let p = &self.p;
+
+            let privkey_blob_len = &mut (self.privkey_packed_bytes_len as isize) as *mut isize;
+            let pubkey_blob_len = &mut (self.pubkey_packed_bytes_len as isize) as *mut isize;
 
             let mut privkey_blob = vec![0u8; *privkey_blob_len as usize];
             let mut pubkey_blob = vec![0u8; *pubkey_blob_len as usize];
@@ -173,6 +179,29 @@ impl NTRUMLS {
         }
     }
 
+    pub fn unpack_fg_from_private_key(&self, sk: &PrivateKey) -> Option<Vec<u16>> {
+        let p = &self.p;
+
+        let product_form_bytes_len = 2*(p.d1 + p.d2 + p.d3) as usize;
+
+        let mut f_blob = vec![0u16; product_form_bytes_len as usize];
+        let mut g_blob = vec![0u16; product_form_bytes_len as usize];
+
+        unsafe {
+            let rc = ffi::unpack_private_key(p as *const PQParamSet, f_blob.as_mut_ptr(), g_blob.as_mut_ptr(),
+                                             std::ptr::null_mut(), self.privkey_packed_bytes_len as isize, sk.0.as_ptr());
+
+            if rc == 0 {
+                let mut vec = Vec::<u16>::new();
+                vec.splice(.., f_blob.iter().cloned());
+                let offset = vec.len();
+                vec.splice(offset.., g_blob.iter().cloned());
+                return Some(vec);
+            }
+            None
+        }
+    }
+
     /**
     * Calculates keypair from 'fg' (concatenated ring elements 'f' and 'g')
     */
@@ -182,17 +211,8 @@ impl NTRUMLS {
             let d = ((p.d1 + p.d2 + p.d3) * 4) as usize;
             assert_eq!(d, fg.len());
 
-            let oid_bytes_len = std::mem::size_of::<[u8; 3]>();
-            let packed_product_from_bytes_len = ((2 * (p.d1 + p.d2 + p.d3) as usize * p.n_bits as usize + 7) / 8) as usize;
-            let packed_mod3_poly_bytes_len = (p.n + 4)/5;
-            let packed_mod_q_poly_bytes_len = (p.n * p.q_bits as u16 + 7)/8;
-            let hash_bytes_len = 64;
-
-            let pubkey_packed_bytes_len = 2 + oid_bytes_len + packed_mod_q_poly_bytes_len as usize + hash_bytes_len;
-            let privkey_packed_bytes_len = 2 + oid_bytes_len + 2 * packed_product_from_bytes_len as usize + packed_mod3_poly_bytes_len as usize;
-
-            let privkey_blob_len = &mut (privkey_packed_bytes_len as isize) as *mut isize;
-            let pubkey_blob_len = &mut (pubkey_packed_bytes_len as isize) as *mut isize;
+            let privkey_blob_len = &mut (self.privkey_packed_bytes_len as isize) as *mut isize;
+            let pubkey_blob_len = &mut (self.pubkey_packed_bytes_len as isize) as *mut isize;
 
             let mut privkey_blob = vec![0u8; *privkey_blob_len as usize];
             let mut pubkey_blob = vec![0u8; *pubkey_blob_len as usize];
@@ -237,15 +257,17 @@ pub mod tests {
 
     #[test]
     fn capabilities() {
-        let fg = [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100];
         let ntrumls = NTRUMLS::with_param_set(super::PQParamSetID::Security269Bit);
-        let (sk, pk) = ntrumls.generate_keypair_from_fg(&fg).expect("failed to generate keypair");
-        println!("{:?}", sk);
-        println!("{:?}", pk);
+        let (sk, pk) = ntrumls.generate_keypair().expect("failed to generate keypair");
+        let fg = ntrumls.unpack_fg_from_private_key(&sk).expect("failed to get Fg");
+        let (sk2, pk2) = ntrumls.generate_keypair_from_fg(&fg).expect("failed to generate keypair \
+        from Fg");
+
+        assert_eq!(sk, sk2);
+        assert_eq!(pk, pk2);
 
         let msg = "TEST MESSAGE";
         let sig = ntrumls.sign(msg.as_bytes(), &sk, &pk).expect("failed to generate signature");
-        println!("{:?}", sig);
         assert!(ntrumls.verify(msg.as_bytes(), &sig, &pk));
     }
 }
