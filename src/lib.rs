@@ -13,28 +13,64 @@
 #![cfg_attr(all(test, feature = "unstable"), feature(test))]
 
 extern crate libc;
-extern crate rustc_serialize;
+extern crate serde;
+extern crate serde_json;
 
-//use std::ops::{Deref, DerefMut};
-use rustc_serialize::{
-    hex::{ToHex, FromHex},
-    Encodable, Decodable, Encoder, Decoder,
-};
+use serde::*;
+use serde::de;
+use serde::de::Visitor;
+use std::fmt;
 
 pub mod ffi;
+
+struct BytesVisitor {
+    bytes: Vec<u8>
+}
+
+impl BytesVisitor {
+    pub fn new() -> Self {
+        BytesVisitor {
+            bytes: Vec::new()
+        }
+    }
+}
+
+impl<'de> Visitor<'de> for BytesVisitor {
+    type Value = Vec<u8>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "failed to parse byte array")
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<<Self as Visitor<'de>>::Value, E> where
+        E: de::Error, {
+        Ok(Vec::from(v))
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<<Self as Visitor<'de>>::Value, <A as de::SeqAccess<'de>>::Error> where
+        A: de::SeqAccess<'de>, {
+        let mut vec = Vec::<u8>::with_capacity(seq.size_hint().unwrap_or(0));
+        while let Some(e) = seq.next_element()? {
+            vec.push(e);
+        }
+        Ok(vec)
+    }
+}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct PublicKey(pub Vec<u8>);
 
-impl Encodable for PublicKey {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        s.emit_str(&format!("{}", self.0.to_hex()))
+impl Serialize for PublicKey {
+    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error> where
+        S: Serializer {
+        serializer.serialize_bytes(&self.0)
     }
 }
 
-impl Decodable for PublicKey {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        Ok(PublicKey(d.read_str()?.from_hex().map_err(|e| d.error(&e.to_string()))?))
+impl<'de> Deserialize<'de> for PublicKey {
+    fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error> where
+        D: Deserializer<'de> {
+        Ok(PublicKey(deserializer.deserialize_byte_buf(BytesVisitor::new())?))
     }
 }
 
@@ -54,15 +90,17 @@ impl Decodable for PublicKey {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct PrivateKey(pub Vec<u8>);
 
-impl Encodable for PrivateKey {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        s.emit_str(&format!("{}", self.0.to_hex()))
+impl Serialize for PrivateKey {
+    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error> where
+        S: Serializer {
+        serializer.serialize_bytes(&self.0)
     }
 }
 
-impl Decodable for PrivateKey {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        Ok(PrivateKey(d.read_str()?.from_hex().map_err(|e| d.error(&e.to_string()))?))
+impl<'de> Deserialize<'de> for PrivateKey {
+    fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error> where
+        D: Deserializer<'de> {
+        Ok(PrivateKey(deserializer.deserialize_byte_buf(BytesVisitor::new())?))
     }
 }
 
@@ -82,15 +120,18 @@ impl Decodable for PrivateKey {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Signature(pub Vec<u8>);
 
-impl Encodable for Signature {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        s.emit_str(&format!("{}", self.0.to_hex()))
+impl Serialize for Signature {
+    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error> where
+        S: Serializer {
+//        serializer.serialize_seq()
+        serializer.serialize_bytes(&self.0)
     }
 }
 
-impl Decodable for Signature {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        Ok(Signature(d.read_str()?.from_hex().map_err(|e| d.error(&e.to_string()))?))
+impl<'de> Deserialize<'de> for Signature {
+    fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error> where
+        D: Deserializer<'de> {
+        Ok(Signature(deserializer.deserialize_byte_buf(BytesVisitor::new())?))
     }
 }
 
@@ -254,6 +295,7 @@ impl NTRUMLS {
 #[cfg(test)]
 pub mod tests {
     use super::NTRUMLS;
+    use serde_json;
 
     #[test]
     fn capabilities() {
@@ -269,5 +311,15 @@ pub mod tests {
         let msg = "TEST MESSAGE";
         let sig = ntrumls.sign(msg.as_bytes(), &sk, &pk).expect("failed to generate signature");
         assert!(ntrumls.verify(msg.as_bytes(), &sig, &pk));
+    }
+
+    #[test]
+    fn serde() {
+        let ntrumls = NTRUMLS::with_param_set(super::PQParamSetID::Security269Bit);
+        let (sk, pk) = ntrumls.generate_keypair().expect("failed to generate keypair");
+        let pk_se = serde_json::to_string(&pk).expect("failed to serialize public key");
+        let pk_de = serde_json::from_str::<::PublicKey>(&pk_se).expect("failed to deserialize public key");
+        let sk_se = serde_json::to_string(&sk).expect("failed to serialize private key");
+        let sk_de = serde_json::from_str::<::PrivateKey>(&sk_se).expect("failed to deserialize private key");
     }
 }
